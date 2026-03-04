@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Coffee Shop</title>
+</head>
+
+<body>
+
+<h1>Order Coffee</h1>
+
+<form id="orderForm">
+Name
+<input name="customer_name">
+
+Drink
+<select name="item_id">
+<option value="1">Americano</option>
+<option value="2">Latte</option>
+<option value="3">Cappuccino</option>
+</select>
+
+Quantity
+<input name="qty" type="number" value="1">
+
+<button>Order</button>
+</form>
+
+<pre id="result"></pre>
+
+<script>
+
+document.getElementById("orderForm").onsubmit = async e => {
+
+e.preventDefault()
+
+const data = Object.fromEntries(new FormData(e.target))
+
+data.item_id = Number(data.item_id)
+data.qty = Number(data.qty)
+
+const res = await fetch("/api/orders",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(data)
+})
+
+document.getElementById("result").textContent =
+await res.text()
+
+}
+
+</script>
+
+</body>
+</html>
