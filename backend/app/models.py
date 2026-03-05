@@ -1,6 +1,7 @@
-from typing import Optional
 from enum import Enum
-from sqlmodel import SQLModel, Field
+from typing import Optional
+
+from sqlmodel import Field, SQLModel
 
 
 class OrderStatus(str, Enum):
@@ -28,6 +29,10 @@ class OrderCreate(OrderBase):
 
 class OrderRead(OrderBase):
     id: int
+    status: OrderStatus
+
+
+class OrderStatusUpdate(SQLModel):
     status: OrderStatus
 
 

@@ -8,8 +8,8 @@
   </head>
   <body>
     <header>
-      <h1>Kitchen</h1>
-      <nav><a href="/">Customer</a></nav>
+      <h1>Kitchen Dashboard</h1>
+      <nav><a href="/">Customer Page</a></nav>
     </header>
 
     <main class="container">
@@ -17,28 +17,48 @@
         <button id="refresh">Refresh</button>
       </div>
 
+      <h2>Orders</h2>
       <div id="orders"></div>
+
+      <h2>Inventory</h2>
+      <div id="inventory" class="box"></div>
+
+      <h2>Debug</h2>
       <pre id="debug" class="box"></pre>
     </main>
 
     <script>
       const ordersEl = document.getElementById("orders");
+      const inventoryEl = document.getElementById("inventory");
       const debugEl = document.getElementById("debug");
 
       async function load() {
-        const res = await fetch("/api/orders");
-        const orders = await res.json();
-        render(orders);
+        const [ordersRes, inventoryRes] = await Promise.all([
+          fetch("/api/orders"),
+          fetch("/api/inventory"),
+        ]);
+
+        const orders = await ordersRes.json();
+        const inventory = await inventoryRes.json();
+
+        renderOrders(orders);
+        renderInventory(inventory);
       }
 
-      function render(orders) {
+      function renderOrders(orders) {
         ordersEl.innerHTML = "";
+        if (orders.length === 0) {
+          ordersEl.innerHTML = '<p class="box">No orders yet.</p>';
+          return;
+        }
+
         for (const o of orders) {
           const div = document.createElement("div");
           div.className = "card";
           div.innerHTML = `
             <div><b>#${o.id}</b> - ${o.customer_name}</div>
             <div>item_id: ${o.item_id} | qty: ${o.qty}</div>
+            <div>note: ${o.note || "-"}</div>
             <div>status: <b>${o.status}</b></div>
             <div class="row">
               <button data-status="RECEIVED">RECEIVED</button>
@@ -47,6 +67,7 @@
               <button data-status="CANCELLED">CANCELLED</button>
             </div>
           `;
+
           div.querySelectorAll("button[data-status]").forEach((btn) => {
             btn.addEventListener("click", async () => {
               const status = btn.getAttribute("data-status");
@@ -59,8 +80,15 @@
               await load();
             });
           });
+
           ordersEl.appendChild(div);
         }
+      }
+
+      function renderInventory(items) {
+        inventoryEl.innerHTML = items
+          .map((item) => `${item.item_name} (id:${item.item_id}) stock: ${item.stock}`)
+          .join("\n");
       }
 
       document.getElementById("refresh").addEventListener("click", load);

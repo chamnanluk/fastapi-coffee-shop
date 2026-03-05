@@ -1,55 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-<title>Coffee Shop</title>
-</head>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Coffee Shop - Customer</title>
+    <link rel="stylesheet" href="/static/coffee.css" />
+  </head>
 
-<body>
+  <body>
+    <header>
+      <h1>Coffee Shop</h1>
+      <nav><a href="/kitchen">Kitchen Dashboard</a></nav>
+    </header>
 
-<h1>Order Coffee</h1>
+    <main class="container">
+      <h2>Create Order</h2>
+      <form id="orderForm" class="box">
+        <label>
+          Name
+          <input name="customer_name" placeholder="Your name" required />
+        </label>
 
-<form id="orderForm">
-Name
-<input name="customer_name">
+        <label>
+          Drink
+          <select name="item_id" id="menuSelect"></select>
+        </label>
 
-Drink
-<select name="item_id">
-<option value="1">Americano</option>
-<option value="2">Latte</option>
-<option value="3">Cappuccino</option>
-</select>
+        <label>
+          Quantity
+          <input name="qty" type="number" value="1" min="1" required />
+        </label>
 
-Quantity
-<input name="qty" type="number" value="1">
+        <label>
+          Note
+          <input name="note" placeholder="No sugar / extra hot / etc." />
+        </label>
 
-<button>Order</button>
-</form>
+        <button type="submit">Place order</button>
+      </form>
 
-<pre id="result"></pre>
+      <h2>Result</h2>
+      <pre id="result" class="box">No order submitted yet.</pre>
+    </main>
 
-<script>
+    <script>
+      const form = document.getElementById("orderForm");
+      const menuSelect = document.getElementById("menuSelect");
+      const result = document.getElementById("result");
 
-document.getElementById("orderForm").onsubmit = async e => {
+      async function loadMenu() {
+        const res = await fetch("/api/menu");
+        const menu = await res.json();
+        menuSelect.innerHTML = "";
 
-e.preventDefault()
+        for (const item of menu) {
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = `${item.name} - $${item.price.toFixed(2)}`;
+          menuSelect.appendChild(option);
+        }
+      }
 
-const data = Object.fromEntries(new FormData(e.target))
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-data.item_id = Number(data.item_id)
-data.qty = Number(data.qty)
+        const data = Object.fromEntries(new FormData(e.target));
+        data.item_id = Number(data.item_id);
+        data.qty = Number(data.qty);
 
-const res = await fetch("/api/orders",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify(data)
-})
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-document.getElementById("result").textContent =
-await res.text()
+        result.textContent = await res.text();
+      });
 
-}
-
-</script>
-
-</body>
+      loadMenu();
+    </script>
+  </body>
 </html>
