@@ -5,9 +5,15 @@ fastapi-coffee-shop
 │
 ├── backend
 │   ├── app
-│   │   ├── main.py        # FastAPI app, HTML routes, API routes
-│   │   ├── db.py          # SQLite engine + table creation
-│   │   └── models.py      # SQLModel schemas and tables
+│   │   ├── __init__.py
+│   │   ├── main.py          # App instantiation, mount static/templates, include routers
+│   │   ├── config.py        # Centralized configurations (e.g. MENU)
+│   │   ├── db.py            # SQLite engine + dependency setup
+│   │   ├── models.py        # SQLModel schemas and tables
+│   │   └── routers
+│   │       ├── __init__.py
+│   │       ├── api.py       # API endpoints (inventory, orders)
+│   │       └── pages.py     # HTML route endpoints (/, /kitchen)
 │   ├── templates
 │   │   ├── customer.html  # Customer ordering page
 │   │   └── kitchen.html   # Kitchen dashboard page

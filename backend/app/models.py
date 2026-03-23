@@ -39,3 +39,7 @@ class OrderStatusUpdate(SQLModel):
 class Inventory(SQLModel, table=True):
     item_id: int = Field(primary_key=True)
     stock: int = 0
+
+
+class InventoryUpdate(SQLModel):
+    add_stock: int
