@@ -29,34 +29,84 @@ def get_inventory(session: Session = Depends(get_session)):
 def list_orders(session: Session = Depends(get_session)):
     return session.exec(select(Order).order_by(Order.id.desc())).all()
 
+# @router.post("/orders", response_model=OrderRead)
+# def create_order(order: OrderCreate, session: Session = Depends(get_session)):
+#     if order.item_id not in MENU_BY_ID:
+#         raise HTTPException(status_code=404, detail="Menu item not found")
+
+#     if order.qty <= 0:
+#         raise HTTPException(status_code=422, detail="Quantity must be more than 0")
+
+#     inventory = session.get(Inventory, order.item_id)
+#     if inventory is None:
+#         raise HTTPException(status_code=404, detail="Inventory item missing")
+
+#     # if inventory.stock < order.qty:
+#     #     raise HTTPException(status_code=409, detail="Not enough stock")
+    
+#     if inventory.stock < order.qty:
+#         raise HTTPException(
+#             status_code=409, 
+#             detail=f"Not enough stock! We only have {inventory.stock} left."
+#         )
+
+#     inventory.stock -= order.qty
+
+#     db_order = Order(**order.model_dump())
+#     session.add(db_order)
+#     session.commit()
+#     session.refresh(db_order)
+#     return db_order
+
 @router.post("/orders", response_model=OrderRead)
 def create_order(order: OrderCreate, session: Session = Depends(get_session)):
+    
+    # --- 1 & 2. Validation Stage (Safe to fail here, no DB writes yet) ---
     if order.item_id not in MENU_BY_ID:
         raise HTTPException(status_code=404, detail="Menu item not found")
 
+    # (Note: If you applied Step 1 to models.py, Pydantic already checks qty > 0)
     if order.qty <= 0:
         raise HTTPException(status_code=422, detail="Quantity must be more than 0")
 
-    inventory = session.get(Inventory, order.item_id)
-    if inventory is None:
-        raise HTTPException(status_code=404, detail="Inventory item missing")
+    # --- Start of the Explicit Transaction Flow ---
+    try:
+        # 3. Check inventory
+        inventory = session.get(Inventory, order.item_id)
+        if inventory is None:
+            raise HTTPException(status_code=404, detail="Inventory item missing")
 
-    # if inventory.stock < order.qty:
-    #     raise HTTPException(status_code=409, detail="Not enough stock")
-    
-    if inventory.stock < order.qty:
+        if inventory.stock < order.qty:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"Not enough stock! We only have {inventory.stock} left."
+            )
+
+        # 4. Deduct stock explicitly
+        inventory.stock -= order.qty
+        session.add(inventory)  # Explicitly staging the stock deduction
+
+        # 5. Create order explicitly
+        db_order = Order(**order.model_dump())
+        session.add(db_order)   # Explicitly staging the order creation
+
+        # 6. Commit the explicit transaction (Saves BOTH to database at the exact same moment)
+        session.commit()
+        session.refresh(db_order)
+        
+        return db_order
+
+    except HTTPException:
+        # If we manually raised a 404 or 409 above, let it pass through to the user
+        raise
+    except Exception as e:
+        # 7. Rollback explicitly if ANYTHING fails (e.g., database connection drops)
+        session.rollback()
+        # (Later in Step 7 you can add a logging step here: print(f"Error: {e}"))
         raise HTTPException(
-            status_code=409, 
-            detail=f"Not enough stock! We only have {inventory.stock} left."
+            status_code=500, 
+            detail="A database error occurred. Your order was not placed and stock was not changed."
         )
-
-    inventory.stock -= order.qty
-
-    db_order = Order(**order.model_dump())
-    session.add(db_order)
-    session.commit()
-    session.refresh(db_order)
-    return db_order
 
 # @router.patch("/orders/{order_id}/status", response_model=OrderRead)
 # def update_order_status(order_id: int, payload: OrderStatusUpdate, session: Session = Depends(get_session)):
