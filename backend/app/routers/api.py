@@ -108,17 +108,17 @@ def create_order(order: OrderCreate, session: Session = Depends(get_session)):
             detail="A database error occurred. Your order was not placed and stock was not changed."
         )
 
-# @router.patch("/orders/{order_id}/status", response_model=OrderRead)
-# def update_order_status(order_id: int, payload: OrderStatusUpdate, session: Session = Depends(get_session)):
-#     order = session.get(Order, order_id)
-#     if order is None:
-#         raise HTTPException(status_code=404, detail="Order not found")
+@router.patch("/orders/{order_id}/status", response_model=OrderRead)
+def update_order_status(order_id: int, payload: OrderStatusUpdate, session: Session = Depends(get_session)):
+    order = session.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
 
-#     order.status = payload.status
-#     session.add(order)
-#     session.commit()
-#     session.refresh(order)
-#     return order
+    order.status = payload.status
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+    return order
 
 @router.patch("/inventory/{item_id}/add-stock")
 def add_to_inventory(item_id: int, payload: InventoryUpdate, session: Session = Depends(get_session)):
